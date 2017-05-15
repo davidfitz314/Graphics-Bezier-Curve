@@ -1,0 +1,181 @@
+#include <cmath>
+#include <iostream>
+#include <GL/glut.h>
+#include "graphics.h"
+
+using namespace std;
+
+class Point2 {
+public:
+	Point2();
+	Point2(double xin, double yin);
+	double getX() const { return x; };
+	double getY() const { return y; };
+	void setX(double xin) { x=xin; };
+	void setY(double yin) { y=yin; };
+	Point2 operator*(const double &rhs);
+	Point2 operator+(const Point2 &rhs);
+private:
+	double x, y;
+};
+
+Point2::Point2() 
+: x(0), y(0) {
+}
+
+Point2::Point2(double xin, double yin)
+: x(xin), y(yin) {
+}
+
+Point2 Point2::operator*(const double &rhs) {
+	return Point2(x * rhs, y * rhs);
+}
+
+Point2 Point2::operator+(const Point2 &rhs) {
+	return Point2(x+rhs.getX(), y+rhs.getY());
+}
+
+class Bezier {
+public:
+	Bezier(Point2 a, Point2 b, Point2 c, Point2 d);
+	Point2 Evaluate(double t);
+	void DrawCurve();
+	void DrawControlPoints();
+	int IsPicked(double x, double y);
+	void Update(int p, double x, double y);
+	void UpdateM(int p, double x, double y);
+private:
+	Point2 points[4];
+	double radius;
+};
+
+Bezier::Bezier(Point2 a, Point2 b, Point2 c, Point2 d) {
+	points[0] = a;
+	points[1] = b;
+	points[2] = c;
+	points[3] = d;
+	radius = 5;
+}
+
+Point2 Bezier::Evaluate(double t) {
+	double n = 1 - t;;
+	Point2 p = points[0]*n*n*n + points[1]*n*n*t*3 + points[2]*n*t*t*3 + points[3]*t*t*t;
+	return p;
+}
+
+void Bezier::DrawCurve() {
+	int sections = 20;
+	double inc = 1.0/sections;
+	for (double t = 0; t < 1; t += inc) {
+		Point2 p1 = Evaluate(t);
+		Point2 p2 = Evaluate(t+inc);
+		DrawLine(p1.getX(), p1.getY(), p2.getX(), p2.getY());
+	}
+}
+
+void Bezier::DrawControlPoints() {
+	for (int i = 0; i < 4; i++) {
+		double x = points[i].getX();
+		double y = points[i].getY();
+		DrawCircle(x, y, radius);
+	}
+}
+
+int Bezier::IsPicked(double x, double y) {
+	for (int i = 0; i < 4; i++) {
+		double x2 = points[i].getX();
+		double y2 = points[i].getY();
+		double dist = (x2-x)*(x2-x) + (y2-y)*(y2-y);
+		dist = sqrt(dist);
+		if (dist < radius)
+			return i;
+	}
+	return -1;
+}
+
+void Bezier::Update(int p, double x, double y) {
+	if (p == -1) {
+		return;
+	}
+	points[p].setX(x);
+	points[p].setY(y);
+}
+
+void Bezier::UpdateM(int p, double x, double y) {
+	if (p == -1) {
+		return;
+	}
+	//grab the x and y distance	from p to other points
+
+	double testx = x - this->points[p].getX();
+	double testy = y - this->points[p].getY();
+
+	if (p==0){
+		/*double new_x1 = x - points[1].getX();
+		double new_y1 = y - points[1].getY();
+		double new_x2 = x - points[2].getX();
+		double new_y2 = y - points[2].getY();
+		double new_x3 = x - points[3].getX();
+		double new_y3 = y - points[3].getY();*/
+		//find 0-3 origins then add new distance to them
+		this->points[p].setX(x);
+		this->points[p].setY(y);
+		this->points[1].setX(this->points[1].getX()+testx);
+		this->points[1].setY(this->points[1].getY()+testy);
+		this->points[2].setX(this->points[2].getX()+testx);
+		this->points[2].setY(this->points[2].getY()+testy);
+		this->points[3].setX(this->points[3].getX()+testx);
+		this->points[3].setY(this->points[3].getY()+testy);
+	} else if (p==1) {
+		/*double new_x0 = x - points[0].getX();
+		double new_y0 = y - points[0].getY();
+		double new_x2 = x - points[2].getX();
+		double new_y2 = y - points[2].getY();
+		double new_x3 = x - points[3].getX();
+		double new_y3 = y - points[3].getY();*/
+		//find 0-3 origins then add new distance to them
+		this->points[0].setX(this->points[0].getX()+testx);
+		this->points[0].setY(this->points[0].getY()+testy);
+		this->points[p].setX(x);
+		this->points[p].setY(y);
+		this->points[2].setX(this->points[2].getX()+testx);
+		this->points[2].setY(this->points[2].getY()+testy);
+		this->points[3].setX(this->points[3].getX()+testx);
+		this->points[3].setY(this->points[3].getY()+testy);
+	} else if (p==2) {
+		/*double new_x0 = x - points[0].getX();
+		double new_y0 = y - points[0].getY();
+		double new_x1 = x - points[1].getX();
+		double new_y1 = y - points[1].getY();
+		double new_x3 = x - points[3].getX();
+		double new_y3 = y - points[3].getY();*/
+		//find 0-3 origins then add new distance to them
+		this->points[0].setX(this->points[0].getX()+testx);
+		this->points[0].setY(this->points[0].getY()+testy);
+		this->points[1].setX(this->points[1].getX()+testx);
+		this->points[1].setY(this->points[1].getY()+testy);
+		this->points[p].setX(x);
+		this->points[p].setY(y);
+		this->points[3].setX(this->points[3].getX()+testx);
+		this->points[3].setY(this->points[3].getY()+testy);
+	} else if (p==3) {
+		/*double new_x0 = x - points[0].getX();
+		double new_y0 = y - points[0].getY();
+		double new_x1 = x - points[1].getX();
+		double new_y1 = y - points[1].getY();
+		double new_x2 = x - points[2].getX();
+		double new_y2 = y - points[2].getY();
+		*/
+		//find 0-3 origins then add new distance to them
+		this->points[0].setX(this->points[0].getX()+testx);
+		this->points[0].setY(this->points[0].getY()+testy);
+		this->points[1].setX(this->points[1].getX()+testx);
+		this->points[1].setY(this->points[1].getY()+testy);
+		this->points[2].setX(this->points[2].getX()+testx);
+		this->points[2].setY(this->points[2].getY()+testy);
+		this->points[p].setX(x);
+		this->points[p].setY(y);
+	}
+
+	
+}
